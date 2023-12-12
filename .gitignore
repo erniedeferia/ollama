@@ -9,3 +9,5 @@ ggml-metal.metal
 .cache
 *.exe
 .idea
+source_documents/
+.python-version
