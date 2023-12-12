@@ -4,6 +4,7 @@ import glob
 from typing import List
 from multiprocessing import Pool
 from tqdm import tqdm
+from pprint import pprint
 
 from langchain.document_loaders import (
     CSVLoader,
@@ -17,6 +18,7 @@ from langchain.document_loaders import (
     UnstructuredODTLoader,
     UnstructuredPowerPointLoader,
     UnstructuredWordDocumentLoader,
+    JSONLoader
 )
 
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -26,7 +28,7 @@ from langchain.docstore.document import Document
 from constants import CHROMA_SETTINGS
 
 
-# Load environment variables
+# Load environment variables
 persist_directory = os.environ.get('PERSIST_DIRECTORY', 'db')
 source_directory = os.environ.get('SOURCE_DIRECTORY', 'source_documents')
 embeddings_model_name = os.environ.get('EMBEDDINGS_MODEL_NAME', 'all-MiniLM-L6-v2')
@@ -55,6 +57,12 @@ class MyElmLoader(UnstructuredEmailLoader):
 
         return doc
 
+# def metadata_func(record: dict, metadata: dict) -> dict:
+
+#     metadata["target_field"] = record.get("target_field")
+#     metadata["source"] = record.get("source")
+
+#     return metadata
 
 # Map file extensions to document loaders and their arguments
 LOADER_MAPPING = {
@@ -72,6 +80,7 @@ LOADER_MAPPING = {
     ".ppt": (UnstructuredPowerPointLoader, {}),
     ".pptx": (UnstructuredPowerPointLoader, {}),
     ".txt": (TextLoader, {"encoding": "utf8"}),
+    ".json": (JSONLoader, {"jq_schema":".field_mappings[]","text_content":False,"json_lines":False})
     # Add more mappings for other file extensions and loaders as needed
 }
 
@@ -81,6 +90,11 @@ def load_single_document(file_path: str) -> List[Document]:
     if ext in LOADER_MAPPING:
         loader_class, loader_args = LOADER_MAPPING[ext]
         loader = loader_class(file_path, **loader_args)
+        if ext == ".json":
+            data = loader.load()
+            pprint(data)
+        else:
+            return loader.load()
         return loader.load()
 
     raise ValueError(f"Unsupported file extension '{ext}'")
@@ -132,6 +146,8 @@ def does_vectorstore_exist(persist_directory: str) -> bool:
             if len(list_index_files) > 3:
                 return True
     return False
+
+
 
 def main():
     # Create embeddings
